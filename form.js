@@ -48,56 +48,6 @@ function capitalize_words(str) {
 }
 
 /**
- * Fix num cores, allowing blanks to remain
- *
- * @param      {event}  event     A change event (node_type or cluster changes)
- */
-function fix_num_cores(event) {
-  const num_cores_input = $('#batch_connect_session_context_num_cores');
-  const data = $('#batch_connect_session_context_node_type').find(':selected').data();
-  const cluster = current_cluster_capitalized();
-
-  // do nothing if num_cores is blank or there's no data for node_type_input
-  if(num_cores_input.val() === '' || !data) {
-    return;
-  }
-
-  if(event.target && event.target.id == 'batch_connect_session_context_cluster'){
-    const prev_cluster = event.target.textContent.split("\n")[0];
-    shift_num_cores_value(num_cores_input, prev_cluster);
-  }
-
-  const min = data["minPpn" + cluster];
-  const max = data["maxPpn" + cluster];
-
-  num_cores_input.attr('max', max);
-  num_cores_input.attr('min', min);
-
-  // Clamp value between min and max
-  num_cores_input.val(
-    clamp(min, max, num_cores_input.val())
-  );
-}
-
-/**
- * Shift the number of cores value up or down when the cluster changes.
- *
- * Example: I've set cores to 28, owens maximum. Then I change clusters
- * to pitzer. This value should shift to 40, which is Pitzer's maximum.
- *
- * @param      {element}   num_cores_input     the num_cores element
- * @param      {string}    previous_cluster    the name of the previous cluster
- */
-function shift_num_cores_value(num_cores_input, previous_cluster){
-  const prev_max_cores = max_cores_for_cluster(previous_cluster);
-  const cluster = current_cluster_capitalized();
-
-  if(num_cores_input.val() == prev_max_cores){
-    num_cores_input.val(max_cores_for_cluster(cluster));
-  }
-}
-
-/**
  * Toggle the visibility of a form group
  *
  * @param      {string}    form_id  The form identifier
@@ -159,28 +109,6 @@ function toggle_options(element_name) {
 }
 
 /**
- * Find the max cores for the cluster given node type
- * that's currently selected
- *
- * @param {string}  cluster_name  The name the cluster
- */
-function max_cores_for_cluster(cluster_name) {
-  if(cluster_name.charAt(0).toUpperCase != cluster_name.charAt(0)){
-    cluster_name = capitalize_words(cluster_name);
-  }
-
-  const node_type_input = $('#batch_connect_session_context_node_type');
-  const data = node_type_input.find(':selected').data();
-  const max = data["maxPpn" + cluster_name];
-
-  if(max) {
-    return max.toString();
-  } else {
-    return "0";
-  }
-}
-
-/**
  * Toggle the visibility of the CUDA select when the selected
  * node_type changes
  */
@@ -203,28 +131,10 @@ function set_node_type_change_handler() {
 }
 
 /**
- * Sets the change handler for the cluster select.
- */
-function set_cluster_change_handler() {
-  let cluster_input = $('#batch_connect_session_context_cluster');
-  cluster_input.change((event) => cluster_change_handler(event));
-}
-
-/**
  * Update UI when node_type changes
  */
 function node_type_change_handler(event) {
-  fix_num_cores(event);
   toggle_cuda_version_visibility(event.target.value);
-}
-
-/**
- * Update UI when the cluster changes
- */
-function cluster_change_handler(event) {
-  fix_num_cores(event);
-  toggle_options("batch_connect_session_context_cuda_version");
-  toggle_options("batch_connect_session_context_node_type");
 }
 
 /**
@@ -232,13 +142,8 @@ function cluster_change_handler(event) {
  */
 
 // Set controls to align with the values of the last session context
-fix_num_cores({ target: document.querySelector('#batch_connect_session_node_type') });
 toggle_cuda_version_visibility(
   $('#batch_connect_session_context_node_type option:selected').val()
 );
-toggle_options("batch_connect_session_context_cuda_version");
-toggle_options("batch_connect_session_context_node_type");
-
 // Install event handlers
 set_node_type_change_handler();
-set_cluster_change_handler();

@@ -1,17 +1,14 @@
-# Export the module function if it exists
-[[ $(type -t module) == "function" ]] && export -f module
+# Load lmod
+source /etc/profile.d/lmod.sh
 
-# Find available port to run server on
-port=$(find_port ${host})
-
-# Generate SHA1 encrypted password (requires OpenSSL installed)
-SALT="$(create_passwd 16)"
-password="$(create_passwd 16)"
-PASSWORD_SHA1="$(echo -n "${password}${SALT}" | openssl dgst -sha1 | awk '{print $NF}')"
+export STAGED_ROOT="${HOME}/ondemand/data/sys/dashboard/batch_connect/bc_osc_k8s_jupyter/output/${POD_NAME}"
+mkdir -p $STAGED_ROOT
+cd $STAGED_ROOT
 
 # The `$CONFIG_FILE` environment variable is exported as it is used in the main
 # `script.sh.erb` file when launching the Jupyter server.
-export CONFIG_FILE="${PWD}/config.py"
+export CONFIG_FILE="/tmp/config.py"
+install -m 0600 $CONFIGMAP_PATH $CONFIG_FILE
 
 # Safari users hit this error https://github.com/jupyterlab/jupyterlab/issues/5486
 # so let's make a new workspace dir that's this job's PWD and copy the defult /lab
@@ -33,11 +30,11 @@ if [[ ${WORKSPACE_FILE+x} ]]; then
   cp $WORKSPACE_FILE .
 fi
 
-JUPYTER_API="<%= context.jupyterlab_switch == "1" ? "lab" : "tree" %>"
+JUPYTER_API="<%= ENV['JUPYTERLAB_SWITCH'] == "1" ? "lab" : "tree" %>"
 
-<%- if context.classroom == "1" -%>
+<%- if ENV['CLASSROOM'] == "1" -%>
 module purge
-module load <%= context.version %>
+module load $VERSION
 
 # Prepare the class environment if the module has set the appropriate variables set.
 # OSC_CLASS_FILES is the instructor's project directory we need to copy from.
@@ -72,7 +69,7 @@ fi
 module purge
 <%- end -%>
 
-export JUPYTERLAB_WORKSPACES_DIR=$PWD
+export JUPYTERLAB_WORKSPACES_DIR=$STAGED_ROOT
 export jupyter_api="$JUPYTER_API"
 
 # Notebook root directory
@@ -81,16 +78,7 @@ export NOTEBOOK_ROOT="${NOTEBOOK_ROOT:-${HOME}}"
 # Generate Jupyter configuration file with secure file permissions
 (
 umask 077
-cat > "${CONFIG_FILE}" << EOL
-c.KernelSpecManager.ensure_native_kernel = False
-c.NotebookApp.ip = '*'
-c.NotebookApp.port = ${port}
-c.NotebookApp.port_retries = 0
-c.NotebookApp.password = u'sha1:${SALT}:${PASSWORD_SHA1}'
-c.NotebookApp.base_url = '/node/${host}/${port}/'
-c.NotebookApp.open_browser = False
-c.NotebookApp.allow_origin = '*'
+cat >> "${CONFIG_FILE}" << EOL
 c.NotebookApp.notebook_dir = '${NOTEBOOK_ROOT}'
-c.NotebookApp.disable_check_xsrf = True
 EOL
 )
