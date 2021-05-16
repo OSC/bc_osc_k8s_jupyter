@@ -1,11 +1,4 @@
 <%
-   pwd_cfg = "c.NotebookApp.password=u\'sha1:${SALT}:${PASSWORD_SHA1}\'"
-   host_port_cfg = "c.NotebookApp.base_url=\'/node/${HOST_CFG}/${PORT_CFG}/\'"
-
-   configmap_mount = "/ood"
-   configmap_filename = "ondemand_config.py"
-   configmap_data = "c.NotebookApp.port = 8080"
-   utility_img = "docker-registry.osc.edu/ondemand/ood-k8s-utils:2.6"
    if node_type =~ /owens/
      cluster = "owens"
      apps_path = "/usr/local"
@@ -21,37 +14,18 @@ script:
   native:
     container:
       name: "jupyter"
-      image: "docker-registry.osc.edu/ondemand/bc_osc_k8s_jupyter:latest"
-      command: "/bin/bash /run.sh"
-      working_dir: "<%= OodSupport::User.new.home %>"
+      image: "docker-registry.osc.edu/ondemand/ondemand-base-el7:latest"
+      image_pull_policy: "Always"
+      command: ["/bin/bash","-l","/ood/script.sh"]
       restart_policy: 'OnFailure'
       env:
         NB_UID: "<%= Etc.getpwnam(ENV['USER']).uid %>"
         NB_USER: "<%= ENV['USER'] %>"
         NB_GID: "<%= Etc.getpwnam(ENV['USER']).gid %>"
-        HOME: "<%= OodSupport::User.new.home %>"
-        CONFIGMAP_PATH: "<%= configmap_mount %>/<%= configmap_filename %>"
-        VERSION: "<%= version %>"
-        CUDA_VERSION: "<%= cuda_version %>"
-        CLASSROOM: "<%= classroom %>"
-        JUPYTERLAB_SWITCH: "<%= jupyterlab_switch %>"
-        NODE_TYPE: "<%= node_type %>"
+        CLUSTER: "<%= cluster %>"
       port: "8080"
       cpu: "<%= cpu %>"
       memory: "<%= memory %>Gi"
-    configmap:
-      files:
-        - filename: "<%= configmap_filename %>"
-          data: |
-            c.KernelSpecManager.ensure_native_kernel = False
-            c.NotebookApp.port = 8080
-            c.NotebookApp.ip = '0.0.0.0'
-            c.NotebookApp.disable_check_xsrf = True
-            c.NotebookApp.allow_origin = '*'
-            c.NotebookApp.open_browser = False
-            c.NotebookApp.terminado_settings = {'shell_command': ['/bin/bash', '--login', '-i']}
-            c.Application.log_level = 'DEBUG'
-          mount_path: "<%= configmap_mount %>"
     mounts:
       - type: host
         name: home
@@ -98,21 +72,5 @@ script:
         host_type: Directory
         path: /apps/<%= cluster %>
         destination_path: <%= apps_path %>
-    init_containers:
-    - name: "init-secret"
-      image: "<%= utility_img %>"
-      command: 
-      - "/bin/save_passwd_as_secret"
-      - "user-<%= ENV['USER'] %>"
-    - name: "add-passwd-to-cfg"
-      image: "<%= utility_img %>"
-      command:
-      - "/bin/bash"
-      - "-c"
-      - "source /bin/passwd_from_secret; source /bin/create_salt_and_sha1; /bin/add_line_to_configmap \\\"<%= pwd_cfg %>\\\" <%= configmap_filename %>"
-    - name: "add-hostport-to-cfg"
-      image: "<%= utility_img %>"
-      command:
-      - "/bin/bash"
-      - "-c"
-      - "source /bin/find_host_port; /bin/add_line_to_configmap \\\"<%= host_port_cfg %>\\\" <%= configmap_filename %>"
+    node_selector:
+      cluster: <%= cluster %>

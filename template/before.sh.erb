@@ -1,14 +1,15 @@
-# Load lmod
+# Export the module function if it exists
 source /etc/profile.d/lmod.sh
 
-export STAGED_ROOT="${HOME}/ondemand/data/sys/dashboard/batch_connect/bc_osc_k8s_jupyter/output/${POD_NAME}"
-mkdir -p $STAGED_ROOT
-cd $STAGED_ROOT
+source /bin/find_host_port
+
+# Generate SHA1 encrypted password (requires OpenSSL installed)
+source /bin/save_passwd_as_secret ${POD_NAMESPACE}
+source /bin/create_salt_and_sha1
 
 # The `$CONFIG_FILE` environment variable is exported as it is used in the main
 # `script.sh.erb` file when launching the Jupyter server.
-export CONFIG_FILE="/tmp/config.py"
-install -m 0600 $CONFIGMAP_PATH $CONFIG_FILE
+export CONFIG_FILE="${PWD}/config.py"
 
 # Safari users hit this error https://github.com/jupyterlab/jupyterlab/issues/5486
 # so let's make a new workspace dir that's this job's PWD and copy the defult /lab
@@ -30,11 +31,11 @@ if [[ ${WORKSPACE_FILE+x} ]]; then
   cp $WORKSPACE_FILE .
 fi
 
-JUPYTER_API="<%= ENV['JUPYTERLAB_SWITCH'] == "1" ? "lab" : "tree" %>"
+JUPYTER_API="<%= context.jupyterlab_switch == "1" ? "lab" : "tree" %>"
 
-<%- if ENV['CLASSROOM'] == "1" -%>
+<%- if context.classroom == "1" -%>
 module purge
-module load $VERSION
+module load <%= context.version %>
 
 # Prepare the class environment if the module has set the appropriate variables set.
 # OSC_CLASS_FILES is the instructor's project directory we need to copy from.
@@ -69,7 +70,7 @@ fi
 module purge
 <%- end -%>
 
-export JUPYTERLAB_WORKSPACES_DIR=$STAGED_ROOT
+export JUPYTERLAB_WORKSPACES_DIR=$PWD
 export jupyter_api="$JUPYTER_API"
 
 # Notebook root directory
@@ -78,7 +79,17 @@ export NOTEBOOK_ROOT="${NOTEBOOK_ROOT:-${HOME}}"
 # Generate Jupyter configuration file with secure file permissions
 (
 umask 077
-cat >> "${CONFIG_FILE}" << EOL
+cat > "${CONFIG_FILE}" << EOL
+c.KernelSpecManager.ensure_native_kernel = False
+c.NotebookApp.ip = '*'
+c.NotebookApp.port = 8080
+c.NotebookApp.port_retries = 0
+c.NotebookApp.password = u'sha1:${SALT}:${PASSWORD_SHA1}'
+c.NotebookApp.base_url = '/node/${HOST_CFG}/${PORT_CFG}/'
+c.NotebookApp.open_browser = False
+c.NotebookApp.terminado_settings = {'shell_command': ['/bin/bash', '--login', '-i']}
+c.NotebookApp.allow_origin = '*'
 c.NotebookApp.notebook_dir = '${NOTEBOOK_ROOT}'
+c.NotebookApp.disable_check_xsrf = True
 EOL
 )

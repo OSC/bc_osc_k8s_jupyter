@@ -1,6 +1,6 @@
+#!/usr/bin/env bash
 
 <%-
-  require 'json'
   require 'pathname'
 
   # The list of Julia installations that LMod knows about
@@ -78,9 +78,9 @@
       }
   end
 
-  cuda = (ENV['NODE_TYPE'] =~ /gpu/) ? " #{ENV['CUDA_VERSION']}" : ""
-  wrapper = "/tmp/launch_wrapper.sh"
-  wrapper_log = "/tmp/launch_wrapper.log"
+  cuda = (context.node_type =~ /gpu/) ? " #{context.cuda_version}" : ""
+  wrapper = session.staged_root.join("launch_wrapper.sh")
+  wrapper_log = session.staged_root.join("launch_wrapper.log")
 
   # kernels common to all clusters. it just happens that pitzer is common to both
   common_kernels = {
@@ -226,9 +226,9 @@
     },
   }
 
-  kernels = if ENV['NODE_TYPE'] =~ /owens/
+  kernels = if context.node_type =~ /owens/
               owens_kernels.merge common_kernels
-            elsif ENV['NODE_TYPE'] =~ /pitzer/
+            elsif context.node_type =~ /pitzer/
               common_kernels
             else
               {}
@@ -289,14 +289,14 @@ chmod 700 "<%= wrapper %>"
 echo "TTT - $(date)"
 
 
-<%- unless ENV['CLASSROOM'] == "1" -%>
+<%- unless context.classroom == "1" -%>
 # Create custom Jupyter kernels
 echo "Creating custom Jupyter kernels..."
-export JUPYTER_PATH="${STAGED_ROOT}/share/jupyter"
+export JUPYTER_PATH="${PWD}/share/jupyter"
 <%- kernels.each do |name, kernel| -%>
 <%- path = "${JUPYTER_PATH}/kernels/sys_#{name}" -%>
 mkdir -p "<%= path %>"
-cp "${STAGED_ROOT}/assets/<%= name.to_s.gsub(/\d|_/, "") %>"/* "<%= path %>/."
+cp "${PWD}/assets/<%= name.to_s.gsub(/\d|_/, "") %>"/* "<%= path %>/."
 (
 umask 077
 cat > "<%= path %>/kernel.json" << EOL
@@ -327,7 +327,7 @@ for dir in "${HOME}/.conda/envs"/*/ "${HOME}/envs"/*/ ; do
       install \
       --name "conda_${KERNEL_NAME}" \
       --display-name "${KERNEL_NAME} [${KERNEL_PATH}]" \
-      --prefix "${STAGED_ROOT}"
+      --prefix "${PWD}"
   ) &
 done
 wait
@@ -337,7 +337,7 @@ echo "TTT - $(date)"
 cd "${NOTEBOOK_ROOT}"
 
 # Setup Jupyter environment
-module load ondemand/project xalt/latest <%= ENV['VERSION'] %>
+module load ondemand/project xalt/latest <%= context.version %>
 module list
 echo "TTT - $(date)"
 
@@ -349,4 +349,4 @@ echo "TTT - $(date)"
 
 # Launch the Jupyter server
 set -x
-jupyter <%= ENV['JUPYTERLAB_SWITCH'] == "1" ? "lab" : "notebook" %> --config="${CONFIG_FILE}"
+jupyter <%= context.jupyterlab_switch == "1" ? "lab" : "notebook" %> --config="${CONFIG_FILE}"
