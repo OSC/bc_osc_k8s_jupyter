@@ -6,6 +6,13 @@
    configmap_filename = "ondemand_config.py"
    configmap_data = "c.NotebookApp.port = 8080"
    utility_img = "docker-registry.osc.edu/ondemand/ood-k8s-utils:2.6"
+   if node_type =~ /owens/
+     cluster = "owens"
+     apps_path = "/usr/local"
+   elsif node_type =~ /pitzer/
+     cluster = "pitzer"
+     apps_path = "/apps"
+   end
 %>
 ---
 script:
@@ -79,18 +86,18 @@ script:
       - type: host
         name: lmod-init
         host_type: File
-        path: /apps/pitzer/lmod/lmod.sh
+        path: /apps/<%= cluster %>/lmod/lmod.sh
         destination_path: /etc/profile.d/lmod.sh
       - type: host
         name: intel
         host_type: Directory
-        path: /nfsroot/pitzer/opt/intel
+        path: /nfsroot/<%= cluster %>/opt/intel
         destination_path: /opt/intel
       - type: host
         name: apps
         host_type: Directory
-        path: /apps/pitzer
-        destination_path: /apps
+        path: /apps/<%= cluster %>
+        destination_path: <%= apps_path %>
     init_containers:
     - name: "init-secret"
       image: "<%= utility_img %>"
