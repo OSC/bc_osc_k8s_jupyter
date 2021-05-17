@@ -11,6 +11,9 @@
 script:
   accounting_id: "<%= account %>"
   wall_time: "<%= wall_time.to_i * 3600 %>"
+  <%- if node_type =~ /gpu/ -%>
+  gpus_per_node: 1
+  <%- end -%>
   native:
     container:
       name: "jupyter"

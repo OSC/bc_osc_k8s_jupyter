@@ -114,7 +114,7 @@ function toggle_options(element_name) {
  */
 function toggle_cuda_version_visibility(selected_node_type) {
   const cuda_element = $('#batch_connect_session_context_cuda_version');
-  const choose_gpu = selected_node_type == 'gpu';
+  const choose_gpu = selected_node_type.includes('gpu');
 
   toggle_visibility_of_form_group(cuda_element, choose_gpu);
   if(choose_gpu){
