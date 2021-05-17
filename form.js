@@ -75,19 +75,11 @@ function toggle_visibility_of_form_group(form_id, show) {
  * currently selected and the data-option-for-CLUSTER attributes
  * for each option
  *
- * @param      {string}  element_name  The name of the element with options to toggle
+ * @param      {string}  element  The element with options to toggle
  */
-function toggle_options(element_name) {
-  const cluster = current_cluster_capitalized();
-  const search = "#" + element_name + " option"
-  const options = $(search);
-
-  options.each(function(_i, option) {
-    // the variable 'option' is just a data structure. it has no attr, data, show
-    // or hide methods so we have to query for it again
+function toggle_options(element) {
+  element.getElementsByTagName("option").each(function(_i, option) {
     let option_element = $(search + "[value='" + option.value + "']");
-    let data = option_element.data();
-    let show = data["optionFor" + cluster];
 
     if(show) {
       option_element.show();
@@ -118,7 +110,7 @@ function toggle_cuda_version_visibility(selected_node_type) {
 
   toggle_visibility_of_form_group(cuda_element, choose_gpu);
   if(choose_gpu){
-    toggle_options("batch_connect_session_context_cuda_version");
+    toggle_options(cuda_element);
   }
 }
 
