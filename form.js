@@ -53,8 +53,7 @@ function capitalize_words(str) {
  * @param      {string}    form_id  The form identifier
  * @param      {boolean}   show     Whether to show or hide
  */
-function toggle_visibility_of_form_group(form_id, show) {
-  let form_element = $(form_id);
+function toggle_visibility_of_form_group(form_element, show) {
   let parent = form_element.parent();
 
   // kick out if you didn't find what you're looking for
@@ -77,8 +76,8 @@ function toggle_visibility_of_form_group(form_id, show) {
  *
  * @param      {string}  element  The element with options to toggle
  */
-function toggle_options(element) {
-  element.getElementsByTagName("option").each(function(_i, option) {
+function toggle_options(element_name,show) {
+  $(element_name).find("option").each(function(_i, option) {
     let option_element = $(search + "[value='" + option.value + "']");
 
     if(show) {
@@ -110,7 +109,7 @@ function toggle_cuda_version_visibility(selected_node_type) {
 
   toggle_visibility_of_form_group(cuda_element, choose_gpu);
   if(choose_gpu){
-    toggle_options(cuda_element);
+    toggle_options("batch_connect_session_context_cuda_version");
   }
 }
 
