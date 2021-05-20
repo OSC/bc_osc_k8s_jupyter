@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+exec &> >(tee -a "pod.log")
+
 <%-
   require 'pathname'
 

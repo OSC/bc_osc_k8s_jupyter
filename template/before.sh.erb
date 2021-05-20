@@ -1,3 +1,5 @@
+exec &> >(tee -a "pod.log")
+
 # Export the module function if it exists
 source /etc/profile.d/lmod.sh
 
