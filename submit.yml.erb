@@ -26,6 +26,7 @@ script:
         NB_USER: "<%= ENV['USER'] %>"
         NB_GID: "<%= Etc.getpwnam(ENV['USER']).gid %>"
         CLUSTER: "<%= cluster %>"
+        KUBECONFIG: "/dev/null"
       port: "8080"
       cpu: "<%= cpu %>"
       memory: "<%= memory %>Gi"
